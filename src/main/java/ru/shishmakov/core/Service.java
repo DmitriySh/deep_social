@@ -46,7 +46,7 @@ public class Service {
         try {
             Map<AppInstall, Integer> groups = new HashMap<>();
             reader.getOrDefault(context.type, (a) -> Collections.emptyList())
-                    .apply(context.path)
+                    .apply(context.source)
                     .forEach(app -> groups.merge(app, 1, (a, b) -> a + b));
 
             List<AppInstall> installs = groups.entrySet().stream()
@@ -74,7 +74,7 @@ public class Service {
     private Function<List<AppInstall>, Void> getCSVWriter() {
         return installs -> {
             try {
-                parser.to(installs, "./result.csv");
+                parser.to(installs, context.dest);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
