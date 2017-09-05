@@ -3,6 +3,7 @@
 *.class
 
 # Log file
+*/logs/
 *.log
 
 # Maven
@@ -41,5 +42,6 @@ hs_err_pid*
 *.ipr
 
 # Project files
-*/logs/
 logs/
+result.csv
+scripts/result.csv
