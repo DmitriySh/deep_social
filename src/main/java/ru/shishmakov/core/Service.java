@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -87,7 +86,8 @@ public class Service {
                 case CSV:
                     return parser.from(context.path);
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
+            this.stop();
             throw new IllegalArgumentException("Parse error", e);
         }
     }
