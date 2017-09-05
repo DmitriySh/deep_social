@@ -1,12 +1,12 @@
 package ru.shishmakov.core;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.shishmakov.core.InputContext.DataType;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.util.Collections;
 import java.util.HashMap;
@@ -74,8 +74,8 @@ public class Service {
     private Function<List<AppInstall>, Void> getCSVWriter() {
         return installs -> {
             try {
-                parser.to(installs);
-            } catch (JsonProcessingException e) {
+                parser.to(installs, "./result.csv");
+            } catch (IOException e) {
                 throw new RuntimeException(e);
             }
             return null;

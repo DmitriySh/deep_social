@@ -1,5 +1,6 @@
 package ru.shishmakov.core;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Sets;
 
@@ -15,9 +16,9 @@ import java.util.Objects;
 import java.util.Set;
 
 import static java.util.Locale.ENGLISH;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.lowerCase;
+import static org.apache.commons.lang3.StringUtils.*;
 
+@JsonPropertyOrder(value = {"stamp", "appId", "country", "quantity"})
 public class AppInstall {
     private static final DateTimeFormatter PATTERN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS", ENGLISH);
     private static final String INSTALL_TIME = "install_time";
@@ -25,31 +26,15 @@ public class AppInstall {
     private static final String COUNTRY_CODE = "country_code";
     private static final Set<String> KEYS = Sets.newHashSet(INSTALL_TIME, APP_ID, COUNTRY_CODE);
 
-    private final long stamp;
-    private final String appId;
-    private final String country;
-    private int quantity;
+    public final long stamp;
+    public final String appId;
+    public final String country;
+    public int quantity;
 
     private AppInstall(long stamp, String appId, String country) {
         this.stamp = stamp;
         this.appId = appId;
         this.country = country;
-    }
-
-    public long getStamp() {
-        return stamp;
-    }
-
-    public String getAppId() {
-        return appId;
-    }
-
-    public String getCountry() {
-        return country;
-    }
-
-    public int getQuantity() {
-        return quantity;
     }
 
     public void setQuantity(int quantity) {
@@ -60,7 +45,7 @@ public class AppInstall {
         Map<String, String> parameters = buildParameters(query);
         String installTime = parameters.get(INSTALL_TIME);
         String appId = lowerCase(parameters.get(APP_ID));
-        String country = lowerCase(parameters.getOrDefault(COUNTRY_CODE, EMPTY));
+        String country = upperCase(parameters.getOrDefault(COUNTRY_CODE, EMPTY));
 
         LocalDateTime dateTime = LocalDateTime.parse(installTime, PATTERN);
         long stamp = dateTime.withMinute((dateTime.getMinute() / 5) * 5)
