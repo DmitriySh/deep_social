@@ -45,9 +45,10 @@ public class Service {
     private void process() {
         try {
             Map<AppInstall, Integer> groups = new HashMap<>();
-            reader.getOrDefault(context.type, (a) -> Collections.emptyList())
-                    .apply(context.source)
-                    .forEach(app -> groups.merge(app, 1, (a, b) -> a + b));
+            reader.getOrDefault(context.type, (a) -> {
+                logger.info("Data type: {} is not implement yet", context.type);
+                return Collections.emptyList();
+            }).apply(context.source).forEach(app -> groups.merge(app, 1, (a, b) -> a + b));
 
             List<AppInstall> installs = groups.entrySet().stream()
                     .peek(e -> e.getKey().setQuantity(e.getValue()))
