@@ -6,7 +6,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import java.io.IOException;
 import java.lang.invoke.MethodHandles;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -22,6 +24,10 @@ public class Service {
     @Inject
     @Named("social.executor")
     private ExecutorService executor;
+    @Inject
+    private InputContext context;
+    @Inject
+    private CSVParser parser;
 
     public Service() {
         this.executor = Executors.newCachedThreadPool();
@@ -31,7 +37,7 @@ public class Service {
         logger.info("Service starting...");
 
         assignThreadHook(this::stop, "server-main-hook-thread");
-//        executor.execute(this::???);
+        executor.execute(this::process);
         logger.info("Service started");
         return this;
     }
@@ -62,11 +68,27 @@ public class Service {
         }
     }
 
-    public static void assignThreadHook(Runnable task, String name) {
+    private static void assignThreadHook(Runnable task, String name) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             logger.debug("{} was interrupted by hook", Thread.currentThread());
             task.run();
         }, name));
     }
 
+    private void process() {
+        List<AppInstall> installs = getInstalls();
+    }
+
+    private List<AppInstall> getInstalls() {
+        try {
+            switch (context.type) {
+                default:
+                    logger.warn("Source type: {} is not implement", context.type);
+                case CSV:
+                    return parser.from(context.path);
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Parse error", e);
+        }
+    }
 }
