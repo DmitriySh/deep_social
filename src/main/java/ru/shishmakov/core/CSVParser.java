@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
 
 @Singleton
@@ -21,13 +22,16 @@ public class CSVParser implements Parser {
     @Override
     public List<AppInstall> from(String source) throws IOException {
         CsvMapper mapper = new CsvMapper();
-        CsvSchema schema = CsvSchema.emptySchema().withHeader().withColumnSeparator(';');
-        MappingIterator<AppInstall> it = mapper.readerFor(AppInstall.class).with(schema).readValues(source);
+        CsvSchema schema = mapper.schemaFor(AppInstall.class)
+                .withNullValue("NULL")
+                .withoutEscapeChar()
+                .withColumnSeparator(';');
+        List<AppInstall> result = new ArrayList<>();
+        MappingIterator<AppInstall> it = mapper.readerFor(AppInstall.class).with(schema).readValues(new File(source));
         while (it.hasNext()) {
-            AppInstall row = it.next();
+            result.add(it.next());
         }
-
-        return null; // TODO: 05.09.17 need response
+        return result;
     }
 
     @Override
