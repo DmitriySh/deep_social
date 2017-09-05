@@ -9,6 +9,6 @@ public class Main {
     public static void main(String[] args) throws InterruptedException {
         Guice.createInjector(new GuiceModule(args))
                 .getInstance(Service.class)
-                .start().await();
+                .start();
     }
 }

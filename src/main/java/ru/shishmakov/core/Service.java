@@ -1,94 +1,84 @@
 package ru.shishmakov.core;
 
-import com.google.common.util.concurrent.MoreExecutors;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.shishmakov.core.InputContext.DataType;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-import javax.inject.Named;
 import java.lang.invoke.MethodHandles;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static ru.shishmakov.util.Threads.sleepWithoutInterruptedAfterTimeout;
+import static ru.shishmakov.core.InputContext.DataType.CSV;
 
 public class Service {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-    private final AtomicBoolean watcherState = new AtomicBoolean(true);
-    @Inject
-    @Named("social.executor")
-    private ExecutorService executor;
+    private final Map<DataType, Function<String, List<AppInstall>>> reader = new HashMap<>();
+    private final Map<DataType, Function<List<AppInstall>, Void>> writer = new HashMap<>();
+
     @Inject
     private InputContext context;
     @Inject
     private CSVParser parser;
 
-    public Service() {
-        this.executor = Executors.newCachedThreadPool();
+    @PostConstruct
+    public void before() {
+        reader.put(CSV, getCSVReader());
+        writer.put(CSV, getCSVWriter());
     }
 
     public Service start() {
-        logger.info("Service starting...");
-
-        assignThreadHook(this::stop, "server-main-hook-thread");
-        executor.execute(this::process);
         logger.info("Service started");
+
+        process();
+        logger.info("Service stopped");
         return this;
     }
 
-    public void stop() {
-        logger.info("Service stopping...");
-
-        watcherState.compareAndSet(true, false);
-        stopExecutors();
-        logger.info("Service stopped, state");
-    }
-
-    public void await() throws InterruptedException {
-        logger.info("Service thread: {} await termination", Thread.currentThread());
-        for (long count = 0; watcherState.get() && !Thread.currentThread().isInterrupted(); count++) {
-            if (count % 100 == 0) logger.debug("Thread: {} is alive", Thread.currentThread());
-            sleepWithoutInterruptedAfterTimeout(100, MILLISECONDS);
-        }
-    }
-
-    private void stopExecutors() {
-        logger.info("Service executor stopping...");
-        try {
-            MoreExecutors.shutdownAndAwaitTermination(executor, 2, SECONDS);
-            logger.info("Executor services stopped");
-        } catch (Exception e) {
-            logger.error("Service exception occurred during stopping executor services", e);
-        }
-    }
-
-    private static void assignThreadHook(Runnable task, String name) {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            logger.debug("{} was interrupted by hook", Thread.currentThread());
-            task.run();
-        }, name));
-    }
-
     private void process() {
-        List<AppInstall> installs = getInstalls();
-    }
-
-    private List<AppInstall> getInstalls() {
         try {
-            switch (context.type) {
-                default:
-                    logger.warn("Source type: {} is not implement", context.type);
-                case CSV:
-                    return parser.from(context.path);
-            }
+            Map<AppInstall, Integer> groups = new HashMap<>();
+            reader.getOrDefault(context.type, (a) -> Collections.emptyList())
+                    .apply(context.path)
+                    .forEach(app -> groups.merge(app, 1, (a, b) -> a + b));
+
+            List<AppInstall> installs = groups.entrySet().stream()
+                    .peek(e -> e.getKey().setQuantity(e.getValue()))
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
+
+            writer.getOrDefault(context.type, (a) -> null)
+                    .apply(installs);
         } catch (Exception e) {
-            this.stop();
             throw new IllegalArgumentException("Parse error", e);
         }
+    }
+
+    private Function<String, List<AppInstall>> getCSVReader() {
+        return (String path) -> {
+            try {
+                return parser.from(path);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        };
+    }
+
+    private Function<List<AppInstall>, Void> getCSVWriter() {
+        return installs -> {
+            try {
+                parser.to(installs);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+            return null;
+        };
     }
 }

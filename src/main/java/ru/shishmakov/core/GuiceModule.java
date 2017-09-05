@@ -1,13 +1,7 @@
 package ru.shishmakov.core;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
-
-import javax.inject.Named;
-import javax.inject.Singleton;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import ru.vyarus.guice.ext.ExtAnnotationsModule;
 
 public class GuiceModule extends AbstractModule {
     private final InputContext context;
@@ -18,16 +12,7 @@ public class GuiceModule extends AbstractModule {
 
     @Override
     protected void configure() {
-//        binder().install(new ExtAnnotationsModule()); // todo if will need
+        binder().install(new ExtAnnotationsModule());
         binder().bind(InputContext.class).toInstance(context);
-    }
-
-    @Provides
-    @Singleton
-    @Named("social.executor")
-    public ExecutorService elevatorExecutor() {
-        ThreadFactoryBuilder factory = new ThreadFactoryBuilder();
-        factory.setNameFormat("social.executor" + "-%d");
-        return Executors.newCachedThreadPool(factory.build());
     }
 }
