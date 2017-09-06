@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -21,7 +22,7 @@ public class Service {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     private final Map<DataType, Function<String, List<AppInstall>>> reader = new HashMap<>();
-    private final Map<DataType, Function<List<AppInstall>, Void>> writer = new HashMap<>();
+    private final Map<DataType, Consumer<List<AppInstall>>> writer = new HashMap<>();
 
     @Inject
     private InputContext context;
@@ -45,8 +46,8 @@ public class Service {
     private void process() {
         try {
             Map<AppInstall, Integer> groups = new HashMap<>();
-            reader.getOrDefault(context.type, (a) -> {
-                logger.info("Data type: {} is not implement yet", context.type);
+            reader.getOrDefault(context.type, a -> {
+                logger.info("Data type: {} reader is not implement yet", context.type);
                 return Collections.emptyList();
             }).apply(context.source).forEach(app -> groups.merge(app, 1, (a, b) -> a + b));
 
@@ -55,15 +56,15 @@ public class Service {
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
 
-            writer.getOrDefault(context.type, (a) -> null)
-                    .apply(installs);
+            writer.getOrDefault(context.type, a -> logger.info("Data type: {} writer is not implement yet", context.type))
+                    .accept(installs);
         } catch (Exception e) {
             throw new IllegalArgumentException("Parse error", e);
         }
     }
 
     private Function<String, List<AppInstall>> getCSVReader() {
-        return (String path) -> {
+        return path -> {
             try {
                 return parser.from(path);
             } catch (Exception e) {
@@ -72,14 +73,13 @@ public class Service {
         };
     }
 
-    private Function<List<AppInstall>, Void> getCSVWriter() {
+    private Consumer<List<AppInstall>> getCSVWriter() {
         return installs -> {
             try {
                 parser.to(installs, context.dest);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            return null;
         };
     }
 }

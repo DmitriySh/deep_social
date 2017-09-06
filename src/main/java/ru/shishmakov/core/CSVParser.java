@@ -39,7 +39,6 @@ public class CSVParser implements Parser {
     @Override
     public void to(List<AppInstall> listDTO, String path) throws IOException {
         byte[] bytes = mapper.writer(writeSchema).writeValueAsBytes(listDTO);
-
         try (OutputStream file = new FileOutputStream(path);
              OutputStream bout = new BufferedOutputStream(file)) {
             bout.write(bytes);
