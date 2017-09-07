@@ -21,7 +21,7 @@ import static ru.shishmakov.core.InputContext.DataType.CSV;
 public class Service {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-    private final Map<DataType, Function<String, List<AppInstall>>> reader = new HashMap<>();
+    private final Map<DataType, Function<String, Map<AppInstall, Integer>>> reader = new HashMap<>();
     private final Map<DataType, Consumer<List<AppInstall>>> writer = new HashMap<>();
 
     @Inject
@@ -45,25 +45,22 @@ public class Service {
 
     private void process() {
         try {
-            Map<AppInstall, Integer> groups = new HashMap<>();
-            reader.getOrDefault(context.type, a -> {
+            Map<AppInstall, Integer> groups = reader.getOrDefault(context.type, a -> {
                 logger.info("Data type: {} reader is not implement yet", context.type);
-                return Collections.emptyList();
-            }).apply(context.source).forEach(app -> groups.merge(app, 1, (a, b) -> a + b));
-
-            List<AppInstall> installs = groups.entrySet().stream()
-                    .peek(e -> e.getKey().setQuantity(e.getValue()))
-                    .map(Map.Entry::getKey)
-                    .collect(Collectors.toList());
+                return Collections.emptyMap();
+            }).apply(context.source);
 
             writer.getOrDefault(context.type, a -> logger.info("Data type: {} writer is not implement yet", context.type))
-                    .accept(installs);
+                    .accept(groups.entrySet().stream()
+                            .peek(e -> e.getKey().setQuantity(e.getValue()))
+                            .map(Map.Entry::getKey)
+                            .collect(Collectors.toList()));
         } catch (Exception e) {
             throw new IllegalArgumentException("Parse error", e);
         }
     }
 
-    private Function<String, List<AppInstall>> getCSVReader() {
+    private Function<String, Map<AppInstall, Integer>> getCSVReader() {
         return path -> {
             try {
                 return parser.from(path);
